@@ -1,7 +1,7 @@
 import * as yaml from 'js-yaml';
 import * as core from '@actions/core';
 import * as fs from 'fs';
-import {checkMatchConfigs} from '../src/labeler';
+import {checkMatchConfigs} from '../src/diff';
 import {
   MatchConfig,
   toMatchConfig,

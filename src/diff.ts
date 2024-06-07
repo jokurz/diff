@@ -17,12 +17,12 @@ type ClientType = ReturnType<typeof github.getOctokit>;
 const GITHUB_MAX_LABELS = 100;
 
 export const run = () =>
-  labeler().catch(error => {
+  diff().catch(error => {
     core.error(error);
     core.setFailed(error.message);
   });
 
-async function labeler() {
+async function diff() {
   const {token, configPath, syncLabels, dot, prNumbers} = getInputs();
 
   if (!prNumbers.length) {
@@ -39,61 +39,16 @@ async function labeler() {
       client,
       configPath
     );
-    const preexistingLabels = pullRequest.data.labels.map(l => l.name);
-    const allLabels: Set<string> = new Set<string>(preexistingLabels);
+    let matches: string[] = [];
 
     for (const [label, configs] of labelConfigs.entries()) {
       core.debug(`processing ${label}`);
       if (checkMatchConfigs(pullRequest.changedFiles, configs, dot)) {
-        allLabels.add(label);
-      } else if (syncLabels) {
-        allLabels.delete(label);
+        matches.push(label);
       }
     }
-
-    const labelsToAdd = [...allLabels].slice(0, GITHUB_MAX_LABELS);
-    const excessLabels = [...allLabels].slice(GITHUB_MAX_LABELS);
-
-    let newLabels: string[] = [];
-
-    try {
-      if (!isEqual(labelsToAdd, preexistingLabels)) {
-        await api.setLabels(client, pullRequest.number, labelsToAdd);
-        newLabels = labelsToAdd.filter(
-          label => !preexistingLabels.includes(label)
-        );
-      }
-    } catch (error: any) {
-      if (
-        error.name !== 'HttpError' ||
-        error.message !== 'Resource not accessible by integration'
-      ) {
-        throw error;
-      }
-
-      core.warning(
-        `The action requires write permission to add labels to pull requests. For more information please refer to the action documentation: https://github.com/actions/labeler#permissions`,
-        {
-          title: `${process.env['GITHUB_ACTION_REPOSITORY']} running under '${github.context.eventName}' is misconfigured`
-        }
-      );
-
-      core.setFailed(error.message);
-
-      return;
-    }
-
-    core.setOutput('new-labels', newLabels.join(','));
-    core.setOutput('all-labels', labelsToAdd.join(','));
-
-    if (excessLabels.length) {
-      core.warning(
-        `Maximum of ${GITHUB_MAX_LABELS} labels allowed. Excess labels: ${excessLabels.join(
-          ', '
-        )}`,
-        {title: 'Label limit for a PR exceeded'}
-      );
-    }
+    let output = JSON.stringify(matches);
+    core.setOutput('matches', output);
   }
 }
 

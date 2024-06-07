@@ -1,4 +1,4 @@
-import {run} from '../src/labeler';
+import {run} from '../src/diff';
 import * as github from '@actions/github';
 import * as core from '@actions/core';
 import path from 'path';
@@ -84,11 +84,7 @@ describe('run', () => {
       labels: ['touched-a-pdf-file']
     });
     expect(setOutputSpy).toHaveBeenCalledWith(
-      'new-labels',
-      'touched-a-pdf-file'
-    );
-    expect(setOutputSpy).toHaveBeenCalledWith(
-      'all-labels',
+      'matches',
       'touched-a-pdf-file'
     );
   });
